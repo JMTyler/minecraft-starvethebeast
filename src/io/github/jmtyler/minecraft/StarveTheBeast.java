@@ -14,7 +14,6 @@ public class StarveTheBeast extends JavaPlugin implements Listener
 	public void onEnable()
 	{
 		this.removeBucket();
-		this.removeCharcoal();
 
 		this.removePickaxe(Material.WOOD);
 		this.removePickaxe(Material.COBBLESTONE);
