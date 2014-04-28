@@ -1,6 +1,7 @@
 package io.github.jmtyler.minecraft;
 
 import org.bukkit.Material;
+import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockDispenseEvent;
 import org.bukkit.inventory.FurnaceRecipe;
@@ -26,6 +27,8 @@ public class StarveTheBeast extends JavaPlugin implements Listener
 
 		this.removeOldTnt();
 		this.addNewTnt();
+
+		this.getServer().getPluginManager().registerEvents(this, this);
 	}
 
 	@Override
@@ -34,6 +37,7 @@ public class StarveTheBeast extends JavaPlugin implements Listener
 
 	}
 
+	@EventHandler
 	public void onBlockDispense(BlockDispenseEvent event)
 	{
 		// TODO: What is Material.LEAVES_2 ?
@@ -77,15 +81,15 @@ public class StarveTheBeast extends JavaPlugin implements Listener
 
 	protected void removeHoe(Material headMaterial)
 	{
-		ShapedRecipe pickaxe = new ShapedRecipe(new ItemStack(Material.AIR));
-		pickaxe.shape(
+		ShapedRecipe hoe = new ShapedRecipe(new ItemStack(Material.AIR));
+		hoe.shape(
 			"HH",
 			" S ",
 			" S "
 		);
-		pickaxe.setIngredient('H', headMaterial);
-		pickaxe.setIngredient('S', Material.STICK);
-		this.getServer().addRecipe(pickaxe);
+		hoe.setIngredient('H', headMaterial);
+		hoe.setIngredient('S', Material.STICK);
+		this.getServer().addRecipe(hoe);
 	}
 
 	protected void removeOldTnt()
