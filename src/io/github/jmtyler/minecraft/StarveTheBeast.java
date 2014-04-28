@@ -1,34 +1,62 @@
 package io.github.jmtyler.minecraft;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
+
+import io.github.jmtyler.minecraft.item.Saltpeter;
+import io.github.jmtyler.minecraft.item.Sulphur;
+import net.minecraft.server.v1_6_R3.Block;
+import net.minecraft.server.v1_6_R3.Item;
+import net.minecraft.server.v1_6_R3.MaterialMapColor;
+
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockDispenseEvent;
+import org.bukkit.event.block.LeavesDecayEvent;
+import org.bukkit.event.inventory.InventoryPickupItemEvent;
+import org.bukkit.event.player.PlayerPickupItemEvent;
 import org.bukkit.inventory.FurnaceRecipe;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.Recipe;
 import org.bukkit.inventory.ShapedRecipe;
+import org.bukkit.inventory.ShapelessRecipe;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.getspout.spout.inventory.SimpleSpoutShapelessRecipe;
+import org.getspout.spoutapi.Spout;
+import org.getspout.spoutapi.SpoutManager;
+import org.getspout.spoutapi.inventory.SpoutItemStack;
+import org.getspout.spoutapi.inventory.SpoutShapelessRecipe;
+import org.getspout.spoutapi.material.CustomItem;
+import org.getspout.spoutapi.material.item.Coal;
 
 public class StarveTheBeast extends JavaPlugin implements Listener
 {
+	public static CustomItem sulphur;
+	public static CustomItem saltpeter;
+
 	@Override
 	public void onEnable()
 	{
-		this.removeBucket();
+		sulphur = new Sulphur(this);
+		saltpeter = new Saltpeter(this);
 
-		this.removePickaxe(Material.WOOD);
-		this.removePickaxe(Material.COBBLESTONE);
-		this.removePickaxe(Material.IRON_INGOT);
-		this.removePickaxe(Material.GOLD_INGOT);
-		this.removePickaxe(Material.DIAMOND);
+		getLogger().info("sulphur id: " + sulphur.getCustomId());
 
-		this.removeHoe(Material.WOOD);
-		this.removeHoe(Material.COBBLESTONE);
+		this.removeUnwantedItems();
+		this.addSimpleTntRecipe();
 
-		this.removeOldTnt();
-		this.addNewTnt();
+		this.addSulphur();
+		this.addSaltpeter();
+		this.addNewGunpowder();
 
+		//Spout.getServer().getPluginManager().registerEvents(this, this);
 		this.getServer().getPluginManager().registerEvents(this, this);
+		getLogger().info("enabling StarveTheBeast 3");
 	}
 
 	@Override
@@ -38,74 +66,107 @@ public class StarveTheBeast extends JavaPlugin implements Listener
 	}
 
 	@EventHandler
-	public void onBlockDispense(BlockDispenseEvent event)
+	public void onBlockBreak(BlockBreakEvent event)
 	{
 		// TODO: What is Material.LEAVES_2 ?
 		if (event.getBlock().getType().equals(Material.LEAVES)) {
 			// Remove saplings.  And also apples, I guess?
-			event.setCancelled(true);
+			Collection<ItemStack> drops = event.getBlock().getDrops();
+			boolean isDroppingSapling = drops.contains(new ItemStack(Material.SAPLING));
+			getLogger().info("LEAVES drop. " + isDroppingSapling);
+			//event.getBlock().getDrops().clear();
+		} else if (event.getBlock().getType().equals(Material.GRAVEL)) {
+			Collection<ItemStack> drops = event.getBlock().getDrops();
+			boolean isDroppingGravel = drops.contains(new ItemStack(Material.GRAVEL));
+			boolean isDroppingFlint  = drops.contains(new ItemStack(Material.FLINT));
+			getLogger().info("GRAVEL drop: " + isDroppingGravel + " " + isDroppingFlint);
+			event.getBlock().getDrops().add(new ItemStack(Material.BAKED_POTATO));
+		} else {
+			getLogger().info("dispensing a thing: " + event.getBlock().getType().getClass());
 		}
 	}
 
-	protected void removeBucket()
+	@EventHandler
+	public void onLeavesDecay(LeavesDecayEvent event)
 	{
-		ShapedRecipe bucket = new ShapedRecipe(new ItemStack(Material.AIR));
-		bucket.shape(
-			"I I",
-			" I "
-		);
-		bucket.setIngredient('I', Material.IRON_INGOT);
-		this.getServer().addRecipe(bucket);
+		getLogger().info("LEAVES DECAY : " + event.getBlock().getDrops().toString());
+	}
+
+	@EventHandler
+	public void onPickupItem(PlayerPickupItemEvent event)
+	{
+		if (event.getItem().getItemStack().getType().equals(Material.SAPLING)) {
+			getLogger().info("got a sapling");
+		} else if (event.getItem().getItemStack().getType().equals(Material.GRAVEL)) {
+			getLogger().info("got a gravel");
+		} else if (event.getItem().getItemStack().getType().equals(Material.FLINT)) {
+			getLogger().info("got a flint");
+		} else {
+			getLogger().info("got something else: " + event.getItem().getItemStack().getType());
+		}
+	}
+
+	protected void removeUnwantedItems()
+	{
+		Collection<ItemStack> unwantedItems = new ArrayList<ItemStack>();
+
 		// TODO: Also, either remove buckets from loot chests or stop player from picking them up.
+		unwantedItems.add(new ItemStack(Material.BUCKET));
+
+		unwantedItems.add(new ItemStack(Material.WOOD_PICKAXE));
+		unwantedItems.add(new ItemStack(Material.STONE_PICKAXE));
+		unwantedItems.add(new ItemStack(Material.IRON_PICKAXE));
+		unwantedItems.add(new ItemStack(Material.GOLD_PICKAXE));
+		unwantedItems.add(new ItemStack(Material.DIAMOND_PICKAXE));
+
+		unwantedItems.add(new ItemStack(Material.WOOD_HOE));
+		unwantedItems.add(new ItemStack(Material.STONE_HOE));
+
+		// Removing old TNT recipe so we can add a simpler one later.
+		unwantedItems.add(new ItemStack(Material.TNT));
+
+		Iterator<Recipe> recipes = this.getServer().recipeIterator();
+		while (recipes.hasNext()) {
+			Recipe recipe = recipes.next();
+			if (unwantedItems.contains(recipe.getResult())) {
+				recipes.remove();
+			}
+		}
 	}
 
-	protected void removeCharcoal()
+	protected void addSulphur()
 	{
-		// TODO: What is Material.LOG_2?
-		FurnaceRecipe charcoal = new FurnaceRecipe(new ItemStack(Material.AIR), Material.LOG);
-		this.getServer().addRecipe(charcoal);
+		// TODO: remove this once you get drops working
+		ShapelessRecipe recipe = new ShapelessRecipe(new SpoutItemStack(sulphur));
+		recipe.addIngredient(Material.GRAVEL);
+		this.getServer().addRecipe(recipe);
+
+		// TODO: change texture to dull yellow dust
+		// TODO: drop from gravel in listener above
 	}
 
-	protected void removePickaxe(Material headMaterial)
+	protected void addSaltpeter()
 	{
-		ShapedRecipe pickaxe = new ShapedRecipe(new ItemStack(Material.AIR));
-		pickaxe.shape(
-			"HHH",
-			" S ",
-			" S "
-		);
-		pickaxe.setIngredient('H', headMaterial);
-		pickaxe.setIngredient('S', Material.STICK);
-		this.getServer().addRecipe(pickaxe);
+		// TODO: remove this once you get drops working
+		ShapelessRecipe recipe = new ShapelessRecipe(new SpoutItemStack(saltpeter));
+		recipe.addIngredient(Material.SAND);
+		this.getServer().addRecipe(recipe);
+
+		// TODO: change texture but don't make it look like sugar?
+		// TODO: drop from sand in listener above
 	}
 
-	protected void removeHoe(Material headMaterial)
+	protected void addNewGunpowder()
 	{
-		ShapedRecipe hoe = new ShapedRecipe(new ItemStack(Material.AIR));
-		hoe.shape(
-			"HH",
-			" S ",
-			" S "
-		);
-		hoe.setIngredient('H', headMaterial);
-		hoe.setIngredient('S', Material.STICK);
-		this.getServer().addRecipe(hoe);
+		SpoutShapelessRecipe recipe = new SpoutShapelessRecipe(new ItemStack(Material.SULPHUR));
+		// TODO: This CANNOT be the right way to achieve this.  And it doesn't even work for charcoal.
+		recipe.addIngredient(new Coal(Material.COAL.name(), Material.COAL.getId(), 0));
+		recipe.addIngredient(sulphur);
+		recipe.addIngredient(saltpeter);
+		SpoutManager.getMaterialManager().registerSpoutRecipe(recipe);
 	}
 
-	protected void removeOldTnt()
-	{
-		ShapedRecipe tnt = new ShapedRecipe(new ItemStack(Material.AIR));
-		tnt.shape(
-			"SGS",
-			"GSG",
-			"SGS"
-		);
-		tnt.setIngredient('S', Material.SAND);
-		tnt.setIngredient('G', Material.SULPHUR);
-		this.getServer().addRecipe(tnt);
-	}
-
-	protected void addNewTnt()
+	protected void addSimpleTntRecipe()
 	{
 		ShapedRecipe tnt1 = new ShapedRecipe(new ItemStack(Material.TNT));
 		tnt1.shape(
