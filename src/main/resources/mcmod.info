@@ -1,0 +1,16 @@
+[
+{
+  "modid": "starvethebeast",
+  "name": "Starve The Beast",
+  "description": "",
+  "version": "${version}",
+  "mcversion": "${mcversion}",
+  "url": "",
+  "updateUrl": "",
+  "authorList": ["JMTyler", "stolksdorf"],
+  "credits": "",
+  "logoFile": "",
+  "screenshots": [],
+  "dependencies": []
+}
+]
